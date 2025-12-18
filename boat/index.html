@@ -1,0 +1,709 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Life Rescue Boat Control</title>
+    <style>
+        :root {
+            --primary: #FF6B00;
+            --danger: #f44336;
+            --success: #4CAF50;
+            --warning: #FFA000;
+            --rescue: #FF3D00;
+            --safety: #FFD600;
+            --dark: #263238;
+            --bg: #ECEFF1;
+            --panel-bg: #ffffff;
+            --text: #263238;
+            --shadow: rgba(0,0,0,0.1);
+            --info-bg: #f5f5f5;
+            --rescue-stripe: repeating-linear-gradient(
+                45deg,
+                var(--rescue) 0px,
+                var(--rescue) 10px,
+                var(--safety) 10px,
+                var(--safety) 20px
+            );
+        }
+        [data-theme="dark"] {
+            --primary: #FF9E80;
+            --danger: #FF8A80;
+            --success: #B9F6CA;
+            --warning: #FFE57F;
+            --rescue: #FF5252;
+            --safety: #FFE082;
+            --dark: #CFD8DC;
+            --bg: #263238;
+            --panel-bg: #37474F;
+            --text: #ECEFF1;
+            --shadow: rgba(0,0,0,0.3);
+            --info-bg: #455A64;
+        }
+        * {
+            transition: background-color 0.3s, color 0.3s, border-color 0.3s, box-shadow 0.3s;
+        }
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: var(--bg);
+            color: var(--text);
+        }
+        .rescue-header {
+            position: relative;
+            background: var(--rescue-stripe);
+            padding: 15px;
+            margin: -20px -20px 20px -20px;
+            color: white;
+            text-align: center;
+            font-size: 24px;
+            font-weight: bold;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+            box-shadow: 0 2px 8px var(--shadow);
+        }
+        .rescue-header::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.2);
+        }
+        .rescue-header span {
+            position: relative;
+            z-index: 1;
+        }
+        .theme-toggle {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
+            background: var(--panel-bg);
+            border: none;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            cursor: pointer;
+            box-shadow: 0 2px 8px var(--shadow);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 20px;
+        }
+        .panel {
+            background: var(--panel-bg);
+            padding: 20px;
+            border-radius: 16px;
+            box-shadow: 0 4px 12px var(--shadow);
+            border: 2px solid var(--rescue);
+        }
+        .header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid var(--rescue);
+        }
+        h1 {
+            margin: 0;
+            color: var(--rescue);
+            font-size: 24px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .rescue-badge {
+            background: var(--rescue);
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: bold;
+            text-transform: uppercase;
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.7; }
+            100% { opacity: 1; }
+        }
+        .status-indicators {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+        }
+        .indicator {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 14px;
+            background: var(--info-bg);
+            padding: 5px 10px;
+            border-radius: 20px;
+        }
+        .indicator-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--primary);
+        }
+        .indicator-dot.connected { background: var(--success); }
+        .indicator-dot.disconnected { background: var(--danger); }
+        .battery-indicator {
+            width: 40px;
+            height: 20px;
+            border: 2px solid var(--text);
+            border-radius: 4px;
+            position: relative;
+            display: flex;
+            align-items: center;
+            padding: 2px;
+        }
+        .battery-level {
+            height: 100%;
+            background: var(--success);
+            border-radius: 2px;
+            transition: width 0.3s;
+        }
+        .battery-tip {
+            width: 4px;
+            height: 10px;
+            background: var(--text);
+            position: absolute;
+            right: -6px;
+            top: 50%;
+            transform: translateY(-50%);
+            border-radius: 0 2px 2px 0;
+        }
+        .signal-strength {
+            display: flex;
+            align-items: flex-end;
+            gap: 2px;
+            height: 20px;
+        }
+        .signal-bar {
+            width: 4px;
+            background: var(--primary);
+            border-radius: 2px 2px 0 0;
+        }
+        .control-panel {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            margin-top: 20px;
+        }
+        .btn {
+            padding: 20px;
+            font-size: 16px;
+            border: none;
+            border-radius: 12px;
+            background-color: var(--primary);
+            color: white;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            user-select: none;
+            -webkit-user-select: none;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 4px 0 rgba(0,0,0,0.2);
+        }
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 0 rgba(0,0,0,0.2);
+        }
+        .btn:active {
+            transform: translateY(2px);
+            box-shadow: 0 2px 0 rgba(0,0,0,0.2);
+        }
+        .btn::after {
+            content: '';
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            top: 0;
+            left: 0;
+            background: white;
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+        .btn:active::after {
+            opacity: 0.2;
+        }
+        .btn-icon {
+            font-size: 24px;
+        }
+        .emergency-btn {
+            background-color: var(--rescue);
+            grid-column: span 3;
+            border: 2px dashed var(--safety);
+            animation: borderPulse 2s infinite;
+        }
+        @keyframes borderPulse {
+            0% { border-color: var(--safety); }
+            50% { border-color: var(--rescue); }
+            100% { border-color: var(--safety); }
+        }
+        .emergency-btn:hover {
+            background-color: var(--danger);
+        }
+        .rescue-info {
+            background: var(--rescue-stripe);
+            color: white;
+            padding: 10px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            text-align: center;
+            font-weight: bold;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+        }
+        .compass-container {
+            position: relative;
+            padding: 20px;
+            background: var(--info-bg);
+            border-radius: 12px;
+            margin-bottom: 15px;
+        }
+        .compass {
+            width: 180px;
+            height: 180px;
+            border-radius: 50%;
+            border: 4px solid var(--rescue);
+            position: relative;
+            margin: 0 auto;
+            background: var(--panel-bg);
+            box-shadow: inset 0 0 20px var(--shadow);
+        }
+        .compass-arrow {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 4px;
+            height: 80px;
+            background: var(--rescue);
+            transform-origin: bottom center;
+            transform: translate(-50%, -100%) rotate(0deg);
+            transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .compass-arrow::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            border-left: 8px solid transparent;
+            border-right: 8px solid transparent;
+            border-bottom: 16px solid var(--rescue);
+        }
+        .compass-labels {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+        }
+        .compass-label {
+            position: absolute;
+            font-weight: bold;
+            font-size: 16px;
+            color: var(--text);
+        }
+        .compass-label.n { top: 15px; left: 50%; transform: translateX(-50%); }
+        .compass-label.s { bottom: 15px; left: 50%; transform: translateX(-50%); }
+        .compass-label.e { right: 15px; top: 50%; transform: translateY(-50%); }
+        .compass-label.w { left: 15px; top: 50%; transform: translateY(-50%); }
+        .location-info {
+            display: grid;
+            grid-template-columns: auto 1fr;
+            gap: 15px;
+            align-items: center;
+            padding: 15px;
+            background: var(--info-bg);
+            border-radius: 12px;
+            box-shadow: inset 0 2px 4px var(--shadow);
+            margin-bottom: 10px;
+        }
+        .location-info label {
+            font-weight: 500;
+            color: var(--text);
+            opacity: 0.8;
+        }
+        .location-info span {
+            font-weight: bold;
+            font-family: monospace;
+            font-size: 1.1em;
+        }
+        .status {
+            grid-column: span 2;
+            text-align: center;
+            padding: 20px;
+            background: var(--info-bg);
+            border-radius: 12px;
+            margin-top: 20px;
+            box-shadow: inset 0 2px 4px var(--shadow);
+            position: relative;
+            overflow: hidden;
+            border: 2px solid var(--rescue);
+        }
+        .status::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 2px;
+            background: var(--rescue-stripe);
+            animation: loading 2s infinite;
+        }
+        @keyframes loading {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(100%); }
+        }
+        #status {
+            font-weight: bold;
+            color: var(--rescue);
+        }
+        .rescue-stats {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            margin-top: 15px;
+        }
+        .stat-item {
+            background: var(--info-bg);
+            padding: 10px;
+            border-radius: 8px;
+            text-align: center;
+        }
+        .stat-value {
+            font-size: 20px;
+            font-weight: bold;
+            color: var(--rescue);
+        }
+        .stat-label {
+            font-size: 12px;
+            opacity: 0.8;
+        }
+        .hidden { display: none; }
+        @media (max-width: 768px) {
+            .container {
+                grid-template-columns: 1fr;
+                padding: 10px;
+            }
+            .status {
+                grid-column: span 1;
+            }
+            .btn {
+                padding: 15px;
+            }
+            .compass {
+                width: 150px;
+                height: 150px;
+            }
+            .rescue-header {
+                font-size: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="rescue-header">
+        <span>🚨 MARITIME RESCUE CONTROL SYSTEM 🚨</span>
+    </div>
+    <button class="theme-toggle" onclick="toggleTheme()">🌓</button>
+    <div class="container">
+        <div class="panel">
+            <div class="header">
+                <h1>
+                    🚤 Rescue Boat Control
+                    <span class="rescue-badge">Active Duty</span>
+                </h1>
+                <div class="status-indicators">
+                    <div class="indicator">
+                        <div class="indicator-dot connected"></div>
+                        <span>Connected</span>
+                    </div>
+                    <div class="battery-indicator">
+                        <div class="battery-level" style="width: 85%;"></div>
+                        <div class="battery-tip"></div>
+                    </div>
+                    <div class="signal-strength">
+                        <div class="signal-bar" style="height: 6px;"></div>
+                        <div class="signal-bar" style="height: 12px;"></div>
+                        <div class="signal-bar" style="height: 18px;"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="rescue-info">
+                ⚓ RESCUE BOAT READY FOR DEPLOYMENT ⚓
+            </div>
+            
+            <div class="control-panel">
+                <div class="btn hidden"></div>
+                <button class="btn" onclick="sendCommand('forward')" onmouseup="sendCommand('stop')" ontouchend="sendCommand('stop')">
+                    <span class="btn-icon">⬆️</span>
+                    <span>Forward</span>
+                </button>
+                <div class="btn hidden"></div>
+                
+                <button class="btn" onclick="sendCommand('left')" onmouseup="sendCommand('stop')" ontouchend="sendCommand('stop')">
+                    <span class="btn-icon">⬅️</span>
+                    <span>Port</span>
+                </button>
+                <button class="btn" onclick="sendCommand('stop')">
+                    <span class="btn-icon">⏹️</span>
+                    <span>STOP</span>
+                </button>
+                <button class="btn" onclick="sendCommand('right')" onmouseup="sendCommand('stop')" ontouchend="sendCommand('stop')">
+                    <span class="btn-icon">➡️</span>
+                    <span>Starboard</span>
+                </button>
+                
+                <div class="btn hidden"></div>
+                <button class="btn" onclick="sendCommand('backward')" onmouseup="sendCommand('stop')" ontouchend="sendCommand('stop')">
+                    <span class="btn-icon">⬇️</span>
+                    <span>Backward</span>
+                </button>
+                <div class="btn hidden"></div>
+                
+                <button class="btn emergency-btn" onclick="toggleEmergencyLight()">
+                    <span class="btn-icon">🚨</span>
+                    <span>EMERGENCY LIGHTS</span>
+                </button>
+            </div>
+        </div>
+
+        <div class="panel location-panel">
+            <div class="header">
+                <h1>📍 Navigation Data</h1>
+            </div>
+            
+            <div class="rescue-info">
+                🎯 MISSION COORDINATES 🎯
+            </div>
+
+            <div class="compass-container">
+                <div class="compass">
+                    <div class="compass-arrow"></div>
+                    <div class="compass-labels">
+                        <span class="compass-label n">N</span>
+                        <span class="compass-label s">S</span>
+                        <span class="compass-label e">E</span>
+                        <span class="compass-label w">W</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="location-info">
+                <label>Latitude:</label>
+                <span id="latitude">--°--'--"N</span>
+            </div>
+            <div class="location-info">
+                <label>Longitude:</label>
+                <span id="longitude">--°--'--"E</span>
+            </div>
+            <div class="location-info">
+                <label>Speed:</label>
+                <span id="speed">-- knots</span>
+            </div>
+            <div class="location-info">
+                <label>Heading:</label>
+                <span id="heading">--°</span>
+            </div>
+
+            <div class="rescue-stats">
+                <div class="stat-item">
+                    <div class="stat-value">12.5m</div>
+                    <div class="stat-label">Search Radius</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value">4/5</div>
+                    <div class="stat-label">Sea State</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="status">
+            Status: <span id="status">Ready for Rescue Operations</span>
+        </div>
+    </div>
+
+    <script>
+        let lastCommand = '';
+        let isEmergencyLightOn = false;
+        let isDarkMode = false;
+        let connectionStatus = true;
+        let batteryLevel = 85;
+        let signalStrength = 3;
+
+        function toggleTheme() {
+            isDarkMode = !isDarkMode;
+            document.documentElement.setAttribute('data-theme', isDarkMode ? 'dark' : 'light');
+            document.querySelector('.theme-toggle').textContent = isDarkMode ? '🌞' : '🌓';
+        }
+
+        function updateBatteryLevel() {
+            batteryLevel = Math.max(0, batteryLevel - 0.1);
+            document.querySelector('.battery-level').style.width = batteryLevel + '%';
+            
+            const batteryEl = document.querySelector('.battery-level');
+            if (batteryLevel < 20) {
+                batteryEl.style.background = 'var(--danger)';
+            } else if (batteryLevel < 50) {
+                batteryEl.style.background = 'var(--warning)';
+            } else {
+                batteryEl.style.background = 'var(--success)';
+            }
+        }
+
+        function updateSignalStrength() {
+            signalStrength = Math.max(0, Math.min(3, signalStrength + (Math.random() > 0.5 ? 1 : -1)));
+            const bars = document.querySelectorAll('.signal-bar');
+            bars.forEach((bar, index) => {
+                bar.style.opacity = index < signalStrength ? '1' : '0.3';
+            });
+        }
+
+        function updateConnectionStatus() {
+            if (Math.random() < 0.05) {
+                connectionStatus = !connectionStatus;
+                const dot = document.querySelector('.indicator-dot');
+                const text = dot.nextElementSibling;
+                if (connectionStatus) {
+                    dot.classList.remove('disconnected');
+                    dot.classList.add('connected');
+                    text.textContent = 'Connected';
+                } else {
+                    dot.classList.remove('connected');
+                    dot.classList.add('disconnected');
+                    text.textContent = 'Disconnected';
+                }
+            }
+        }
+
+        function updateLocationData() {
+            const mockData = {
+                latitude: (Math.random() * 2 + 24).toFixed(6),
+                longitude: (Math.random() * 2 + 67).toFixed(6),
+                speed: (Math.random() * 10).toFixed(1),
+                heading: Math.floor(Math.random() * 360)
+            };
+
+            document.getElementById('latitude').textContent = `${mockData.latitude}°N`;
+            document.getElementById('longitude').textContent = `${mockData.longitude}°E`;
+            document.getElementById('speed').textContent = `${mockData.speed} knots`;
+            document.getElementById('heading').textContent = `${mockData.heading}°`;
+
+            document.querySelector('.compass-arrow').style.transform = 
+                `translate(-50%, -100%) rotate(${mockData.heading}deg)`;
+        }
+
+        function sendCommand(command) {
+            if (!connectionStatus) {
+                document.getElementById('status').textContent = 'Error: Not connected';
+                return;
+            }
+            
+            if (command === lastCommand) return;
+            lastCommand = command;
+            
+            fetch('/' + command)
+                .then(response => response.text())
+                .then(data => {
+                    document.getElementById('status').textContent = data;
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    document.getElementById('status').textContent = 'Error: ' + error;
+                });
+        }
+
+        function toggleEmergencyLight() {
+            if (!connectionStatus) {
+                document.getElementById('status').textContent = 'Error: Not connected';
+                return;
+            }
+
+            fetch('/emergency')
+                .then(response => response.text())
+                .then(data => {
+                    document.getElementById('status').textContent = data;
+                    isEmergencyLightOn = !isEmergencyLightOn;
+                    const emergencyBtn = document.querySelector('.emergency-btn');
+                    emergencyBtn.style.backgroundColor = isEmergencyLightOn ? 'var(--success)' : 'var(--rescue)';
+                    emergencyBtn.style.transform = 'scale(1.05)';
+                    setTimeout(() => emergencyBtn.style.transform = 'scale(1)', 200);
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    document.getElementById('status').textContent = 'Error: ' + error;
+                });
+        }
+
+        document.addEventListener('keydown', function(event) {
+            if (!connectionStatus) return;
+            
+            switch(event.key) {
+                case 'ArrowUp':
+                case 'w':
+                case 'W':
+                    sendCommand('forward');
+                    break;
+                case 'ArrowDown':
+                case 's':
+                case 'S':
+                    sendCommand('backward');
+                    break;
+                case 'ArrowLeft':
+                case 'a':
+                case 'A':
+                    sendCommand('left');
+                    break;
+                case 'ArrowRight':
+                case 'd':
+                case 'D':
+                    sendCommand('right');
+                    break;
+                case ' ':
+                    sendCommand('stop');
+                    break;
+                case 'e':
+                case 'E':
+                    toggleEmergencyLight();
+                    break;
+            }
+        });
+
+        document.addEventListener('keyup', function(event) {
+            if (!connectionStatus) return;
+            
+            if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'w', 'W', 'a', 'A', 's', 'S', 'd', 'D'].includes(event.key)) {
+                sendCommand('stop');
+            }
+        });
+
+        // Update intervals
+        setInterval(updateLocationData, 2000);
+        setInterval(updateBatteryLevel, 5000);
+        setInterval(updateSignalStrength, 3000);
+        setInterval(updateConnectionStatus, 10000);
+
+        // Initialize theme based on system preference
+        if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+            toggleTheme();
+        }
+    </script>
+</body>
+</html>
