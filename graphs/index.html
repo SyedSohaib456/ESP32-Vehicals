@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>ESP32 Sensor Data</title>
+  <style>
+    body { 
+      font-family: 'Roboto', sans-serif; 
+      background-color: #121212; 
+      color: #ffffff; 
+      display: flex; 
+      flex-direction: column; 
+      align-items: center; 
+      justify-content: center; 
+      height: 100vh; 
+      margin: 0; 
+    }
+    .head{
+      width: 90vw;
+       display: flex;
+       justify-content: space-between;
+       align-items: center;
+       position:relative;
+       top: -2%;
+    }
+
+    h1 { 
+      font-size: 2.6em; 
+      color: #00e676; 
+      font-family: Verdana, Geneva, Tahoma, sans-serif;
+    }
+     
+     h2,h3{
+         
+      font-family: monospace;
+      font-size: 32px;
+     }
+
+     h2 a{
+      font-family: monospace;
+      font-size: 32px;
+      text-decoration: none;
+      color: white;
+     }
+
+    .data-container { 
+      display: flex; 
+      margin-top: 6px;
+      flex-wrap: wrap; 
+      display: 100vh;
+      justify-content: center; 
+      position: relative;
+      bottom: 4%;
+      gap: 18px; 
+    }
+    .data-box { 
+      background: #1e1e1e; 
+      border-radius: 10px; 
+      padding: 15px; 
+      margin: 5px 10px; 
+      box-shadow: 0 0 15px rgba(0, 230, 118, 0.3); 
+      transition: transform 0.3s ease, box-shadow 0.3s ease; 
+      width: 38%; /* Adjust width as necessary */
+      height: 45%;
+      text-align: center;
+    }
+    .data-box:hover { 
+      transform: translateY(-10px); 
+      box-shadow: 0 0 25px rgba(0, 230, 118, 0.5); 
+    }
+    .data-box p { 
+      font-size: 1.5em; 
+      margin: 10px 0; 
+    }
+    .data-value { 
+      font-weight: bold; 
+      color: #00b0ff; 
+    }
+    .chart-container {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-top: 5px;
+    }
+    .chart {
+      margin-top:10px;
+      width: 80%;
+      max-width: 600px;
+      height: 15rem;
+      background-color: #1e1e1e;
+      border-radius: 10px;
+      box-shadow: 0 0 15px rgba(0, 230, 118, 0.3);
+    }
+  </style>
+</head>
+<body>
+  <div class="head">
+    <h3>Rover</h3>
+    <h1>EcoSphere Metrics</h1>
+    <h2><a href="https://www.instagram.com/ai_watchbots/?igsh=MThzYWc2b2RxOWN1aA%3D%3D" target="_blank">ai_watchbots</a></h2>
+  </div>
+ 
+  <div class="data-container">
+    <div class="data-box">
+      <p>Temperature: <span id="temperature" class="data-value">Loading...</span> &#8451;</p>
+      <div class="chart-container">
+        <canvas id="temperatureChart" class="chart"></canvas>
+      </div>
+    </div>
+    <div class="data-box">
+      <p>Humidity: <span id="humidity" class="data-value">Loading...</span> %</p>
+      <div class="chart-container">
+        <canvas id="humidityChart" class="chart"></canvas>
+      </div>
+    </div>
+    <div class="data-box">
+      <p>Gas Level (MQ2): <span id="mq2" class="data-value">Loading...</span></p>
+      <div class="chart-container">
+        <canvas id="mq2Chart" class="chart"></canvas>
+      </div>
+    </div>
+    <div class="data-box">
+      <p>Dust Density: <span id="dust" class="data-value">Loading...</span> µg/m³</p>
+      <div class="chart-container">
+        <canvas id="dustChart" class="chart"></canvas>
+      </div>
+    </div>
+  </div>
+  <script>
+    let temperatureChart, humidityChart, mq2Chart, dustChart;
+    let temperatureData = [], humidityData = [], mq2Data = [], dustData = [];
+    const maxDataPoints = 20;
+
+    function generateRandomData() {
+      return {
+        temperature: (Math.random() * 10 + 20).toFixed(2), // Random temp between 20 and 30
+        humidity: (Math.random() * 20 + 40).toFixed(2), // Random humidity between 40 and 60
+        mq2: (Math.random() * 100 + 300).toFixed(2), // Random gas level between 300 and 400
+        dust: (Math.random() * 50 + 100).toFixed(2) // Random dust density between 100 and 150
+      };
+    }
+
+    function fetchData() {
+      const data = generateRandomData();
+      document.getElementById('temperature').textContent = data.temperature;
+      document.getElementById('humidity').textContent = data.humidity;
+      document.getElementById('mq2').textContent = data.mq2;
+      document.getElementById('dust').textContent = data.dust;
+
+      updateChartData(temperatureChart, temperatureData, data.temperature);
+      updateChartData(humidityChart, humidityData, data.humidity);
+      updateChartData(mq2Chart, mq2Data, data.mq2);
+      updateChartData(dustChart, dustData, data.dust);
+    }
+
+    function updateChartData(chart, data, newData) {
+      const time = new Date().toLocaleTimeString();
+      data.push({ time, value: parseFloat(newData) });
+
+      if (data.length > maxDataPoints) {
+        data.shift();
+      }
+
+      const labels = data.map(entry => entry.time);
+      const values = data.map(entry => entry.value);
+
+      // Get min and max values for scaling
+      const minValue = Math.min(...values);
+      const maxValue = Math.max(...values);
+
+      // Add a buffer to the min and max values to reduce sensitivity
+      const buffer = (maxValue - minValue) * 0.1;
+      const adjustedMinValue = minValue - buffer;
+      const adjustedMaxValue = maxValue + buffer;
+
+      const ctx = chart.getContext('2d');
+      ctx.clearRect(0, 0, chart.width, chart.height);
+      ctx.beginPath();
+
+      // Scale using the adjusted min and max values
+      const scaleY = chart.height / (adjustedMaxValue - adjustedMinValue);
+      const scaleX = chart.width / (maxDataPoints - 1);
+
+      ctx.moveTo(0, chart.height - (values[0] - adjustedMinValue) * scaleY);
+      for (let i = 1; i < values.length; i++) {
+        ctx.lineTo(i * scaleX, chart.height - (values[i] - adjustedMinValue) * scaleY);
+      }
+
+      ctx.strokeStyle = '#00e676';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+    }
+
+    function initCharts() {
+      temperatureChart = document.getElementById('temperatureChart');
+      humidityChart = document.getElementById('humidityChart');
+      mq2Chart = document.getElementById('mq2Chart');
+      dustChart = document.getElementById('dustChart');
+
+      temperatureChart.width = temperatureChart.offsetWidth;
+      humidityChart.width = humidityChart.offsetWidth;
+      mq2Chart.width = mq2Chart.offsetWidth;
+      dustChart.width = dustChart.offsetWidth;
+
+      temperatureChart.height = 200;
+      humidityChart.height = 200;
+      mq2Chart.height = 200;
+      dustChart.height = 200;
+    }
+
+    window.onload = () => {
+      initCharts();
+      setInterval(fetchData, 1000); // Fetch data every second
+      fetchData(); // Initial fetch
+    };
+  </script>
+</body>
+</html>

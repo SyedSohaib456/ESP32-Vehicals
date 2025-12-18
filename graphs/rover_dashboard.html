@@ -1,0 +1,761 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rover Command Center</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --primary-bg: #0a0a0f;
+            --secondary-bg: #1a1a2e;
+            --card-bg: #16213e;
+            --accent-color: #00ff88;
+            --accent-secondary: #ff6b35;
+            --text-primary: #ffffff;
+            --text-secondary: #b0b3b8;
+            --border-color: #2d3748;
+            --shadow-glow: 0 0 20px rgba(0, 255, 136, 0.2);
+            --shadow-card: 0 8px 32px rgba(0, 0, 0, 0.3);
+            --gradient-primary: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --gradient-secondary: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            --gradient-tertiary: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            --gradient-quaternary: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--primary-bg);
+            color: var(--text-primary);
+            overflow-x: hidden;
+            position: relative;
+        }
+
+        /* Animated background */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle at 20% 80%, rgba(120, 119, 198, 0.1) 0%, transparent 50%),
+                        radial-gradient(circle at 80% 20%, rgba(255, 107, 53, 0.1) 0%, transparent 50%),
+                        radial-gradient(circle at 40% 40%, rgba(0, 255, 136, 0.05) 0%, transparent 50%);
+            z-index: -1;
+            animation: backgroundFlow 20s ease-in-out infinite;
+        }
+
+        @keyframes backgroundFlow {
+            0%, 100% { transform: scale(1) rotate(0deg); }
+            50% { transform: scale(1.1) rotate(180deg); }
+        }
+
+        /* Header */
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 2rem 3rem;
+            background: rgba(26, 26, 46, 0.8);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid var(--border-color);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .logo-section {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .logo {
+            width: 50px;
+            height: 50px;
+            background: var(--gradient-primary);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            box-shadow: var(--shadow-glow);
+        }
+
+        .title {
+            font-size: 2rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--accent-color), #00d4ff);
+            background-clip: text;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.75rem 1.5rem;
+            background: rgba(0, 255, 136, 0.1);
+            border: 1px solid var(--accent-color);
+            border-radius: 25px;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            background: var(--accent-color);
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.7; transform: scale(1.2); }
+        }
+
+        .social-link {
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            padding: 0.75rem 1.5rem;
+            border: 1px solid var(--border-color);
+            border-radius: 25px;
+        }
+
+        .social-link:hover {
+            color: var(--accent-color);
+            border-color: var(--accent-color);
+            box-shadow: var(--shadow-glow);
+        }
+
+        /* Main Dashboard */
+        .dashboard {
+            padding: 2rem 3rem;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            grid-template-rows: auto auto;
+            gap: 2rem;
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+
+        .sensor-card {
+            background: var(--card-bg);
+            border-radius: 20px;
+            padding: 2rem;
+            box-shadow: var(--shadow-card);
+            border: 1px solid var(--border-color);
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .sensor-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 4px;
+            background: var(--gradient-primary);
+        }
+
+        .sensor-card:nth-child(2)::before {
+            background: var(--gradient-secondary);
+        }
+
+        .sensor-card:nth-child(3)::before {
+            background: var(--gradient-tertiary);
+        }
+
+        .sensor-card:nth-child(4)::before {
+            background: var(--gradient-quaternary);
+        }
+
+        .sensor-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.4);
+        }
+
+        .sensor-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .sensor-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .sensor-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.25rem;
+        }
+
+        .temperature .sensor-icon {
+            background: var(--gradient-primary);
+        }
+
+        .humidity .sensor-icon {
+            background: var(--gradient-secondary);
+        }
+
+        .gas .sensor-icon {
+            background: var(--gradient-tertiary);
+        }
+
+        .dust .sensor-icon {
+            background: var(--gradient-quaternary);
+        }
+
+        .sensor-value {
+            font-size: 2.5rem;
+            font-weight: 700;
+            font-family: 'JetBrains Mono', monospace;
+            margin-bottom: 1rem;
+        }
+
+        .temperature .sensor-value {
+            color: #667eea;
+        }
+
+        .humidity .sensor-value {
+            color: #f5576c;
+        }
+
+        .gas .sensor-value {
+            color: #00f2fe;
+        }
+
+        .dust .sensor-value {
+            color: #38f9d7;
+        }
+
+        .sensor-unit {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            font-weight: 400;
+        }
+
+        .chart-container {
+            height: 250px;
+            position: relative;
+        }
+
+        .chart-canvas {
+            border-radius: 10px;
+            background: rgba(0, 0, 0, 0.2);
+        }
+
+        /* Controls Panel */
+        .controls-panel {
+            position: fixed;
+            right: 2rem;
+            top: 50%;
+            transform: translateY(-50%);
+            background: var(--card-bg);
+            border-radius: 15px;
+            padding: 1.5rem;
+            border: 1px solid var(--border-color);
+            box-shadow: var(--shadow-card);
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            z-index: 50;
+        }
+
+        .control-btn {
+            width: 50px;
+            height: 50px;
+            border: none;
+            border-radius: 12px;
+            background: var(--gradient-primary);
+            color: white;
+            font-size: 1.25rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .control-btn:hover {
+            transform: scale(1.1);
+            box-shadow: var(--shadow-glow);
+        }
+
+        .control-btn:nth-child(2) {
+            background: var(--gradient-secondary);
+        }
+
+        .control-btn:nth-child(3) {
+            background: var(--gradient-tertiary);
+        }
+
+        .control-btn:nth-child(4) {
+            background: var(--gradient-quaternary);
+        }
+
+        /* Loading Animation */
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255, 255, 255, 0.2);
+            border-radius: 50%;
+            border-top-color: var(--accent-color);
+            animation: spin 1s ease-in-out infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Responsive Design */
+        @media (max-width: 1200px) {
+            .dashboard {
+                grid-template-columns: 1fr;
+                padding: 1.5rem;
+            }
+            
+            .controls-panel {
+                position: static;
+                transform: none;
+                margin: 2rem auto;
+                flex-direction: row;
+                justify-content: center;
+            }
+            
+            .header {
+                padding: 1.5rem;
+                flex-direction: column;
+                gap: 1rem;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .sensor-card {
+                padding: 1.5rem;
+            }
+            
+            .sensor-value {
+                font-size: 2rem;
+            }
+            
+            .chart-container {
+                height: 200px;
+            }
+            
+            .title {
+                font-size: 1.5rem;
+            }
+        }
+
+        /* Data flow animation */
+        .data-flow {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            width: 8px;
+            height: 8px;
+            background: var(--accent-color);
+            border-radius: 50%;
+            opacity: 0;
+            animation: dataFlow 3s infinite;
+        }
+
+        @keyframes dataFlow {
+            0% { opacity: 0; transform: scale(0); }
+            50% { opacity: 1; transform: scale(1); }
+            100% { opacity: 0; transform: scale(0); }
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="logo-section">
+            <div class="logo">
+                <i class="fas fa-robot"></i>
+            </div>
+            <h1 class="title">Rover Command Center</h1>
+        </div>
+        
+        <div class="status-indicator">
+            <div class="status-dot"></div>
+            <span>ONLINE</span>
+        </div>
+        
+        <a href="https://www.instagram.com/ai_watchbots/?igsh=MThzYWc2b2RxOWN1aA%3D%3D" target="_blank" class="social-link">
+            <i class="fab fa-instagram"></i> ai_watchbots
+        </a>
+    </header>
+
+    <!-- Main Dashboard -->
+    <main class="dashboard">
+        <!-- Temperature Sensor -->
+        <div class="sensor-card temperature">
+            <div class="data-flow"></div>
+            <div class="sensor-header">
+                <div class="sensor-title">
+                    <div class="sensor-icon">
+                        <i class="fas fa-thermometer-half"></i>
+                    </div>
+                    Temperature
+                </div>
+            </div>
+            <div class="sensor-value">
+                <span id="temperature">--</span>
+                <span class="sensor-unit">°C</span>
+            </div>
+            <div class="chart-container">
+                <canvas id="temperatureChart" class="chart-canvas"></canvas>
+            </div>
+        </div>
+
+        <!-- Humidity Sensor -->
+        <div class="sensor-card humidity">
+            <div class="data-flow"></div>
+            <div class="sensor-header">
+                <div class="sensor-title">
+                    <div class="sensor-icon">
+                        <i class="fas fa-tint"></i>
+                    </div>
+                    Humidity
+                </div>
+            </div>
+            <div class="sensor-value">
+                <span id="humidity">--</span>
+                <span class="sensor-unit">%</span>
+            </div>
+            <div class="chart-container">
+                <canvas id="humidityChart" class="chart-canvas"></canvas>
+            </div>
+        </div>
+
+        <!-- Gas Sensor -->
+        <div class="sensor-card gas">
+            <div class="data-flow"></div>
+            <div class="sensor-header">
+                <div class="sensor-title">
+                    <div class="sensor-icon">
+                        <i class="fas fa-cloud"></i>
+                    </div>
+                    Gas Level (MQ2)
+                </div>
+            </div>
+            <div class="sensor-value">
+                <span id="mq2">--</span>
+                <span class="sensor-unit">ppm</span>
+            </div>
+            <div class="chart-container">
+                <canvas id="mq2Chart" class="chart-canvas"></canvas>
+            </div>
+        </div>
+
+        <!-- Dust Sensor -->
+        <div class="sensor-card dust">
+            <div class="data-flow"></div>
+            <div class="sensor-header">
+                <div class="sensor-title">
+                    <div class="sensor-icon">
+                        <i class="fas fa-smog"></i>
+                    </div>
+                    Dust Density
+                </div>
+            </div>
+            <div class="sensor-value">
+                <span id="dust">--</span>
+                <span class="sensor-unit">µg/m³</span>
+            </div>
+            <div class="chart-container">
+                <canvas id="dustChart" class="chart-canvas"></canvas>
+            </div>
+        </div>
+    </main>
+
+    <!-- Controls Panel -->
+    <div class="controls-panel">
+        <button class="control-btn" onclick="toggleDataStream()" title="Toggle Data Stream">
+            <i class="fas fa-play" id="streamIcon"></i>
+        </button>
+        <button class="control-btn" onclick="resetCharts()" title="Reset Charts">
+            <i class="fas fa-redo"></i>
+        </button>
+        <button class="control-btn" onclick="exportData()" title="Export Data">
+            <i class="fas fa-download"></i>
+        </button>
+        <button class="control-btn" onclick="toggleFullscreen()" title="Toggle Fullscreen">
+            <i class="fas fa-expand"></i>
+        </button>
+    </div>
+
+    <script>
+        // Chart configurations
+        const chartConfig = {
+            type: 'line',
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                animation: {
+                    duration: 750,
+                    easing: 'easeInOutQuart'
+                },
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                },
+                scales: {
+                    x: {
+                        display: false,
+                        grid: {
+                            display: false
+                        }
+                    },
+                    y: {
+                        display: false,
+                        grid: {
+                            display: false
+                        }
+                    }
+                },
+                elements: {
+                    point: {
+                        radius: 0,
+                        hoverRadius: 6
+                    },
+                    line: {
+                        borderWidth: 3,
+                        tension: 0.4
+                    }
+                },
+                interaction: {
+                    intersect: false,
+                    mode: 'index'
+                }
+            }
+        };
+
+        // Initialize charts
+        let temperatureChart, humidityChart, mq2Chart, dustChart;
+        let dataStreaming = true;
+        let dataHistory = {
+            temperature: [],
+            humidity: [],
+            mq2: [],
+            dust: []
+        };
+
+        const maxDataPoints = 20;
+        const colors = {
+            temperature: '#667eea',
+            humidity: '#f5576c',
+            mq2: '#00f2fe',
+            dust: '#38f9d7'
+        };
+
+        function initializeCharts() {
+            const ctx1 = document.getElementById('temperatureChart').getContext('2d');
+            const ctx2 = document.getElementById('humidityChart').getContext('2d');
+            const ctx3 = document.getElementById('mq2Chart').getContext('2d');
+            const ctx4 = document.getElementById('dustChart').getContext('2d');
+
+            temperatureChart = new Chart(ctx1, {
+                ...chartConfig,
+                data: {
+                    labels: [],
+                    datasets: [{
+                        data: [],
+                        borderColor: colors.temperature,
+                        backgroundColor: `${colors.temperature}20`,
+                        fill: true
+                    }]
+                }
+            });
+
+            humidityChart = new Chart(ctx2, {
+                ...chartConfig,
+                data: {
+                    labels: [],
+                    datasets: [{
+                        data: [],
+                        borderColor: colors.humidity,
+                        backgroundColor: `${colors.humidity}20`,
+                        fill: true
+                    }]
+                }
+            });
+
+            mq2Chart = new Chart(ctx3, {
+                ...chartConfig,
+                data: {
+                    labels: [],
+                    datasets: [{
+                        data: [],
+                        borderColor: colors.mq2,
+                        backgroundColor: `${colors.mq2}20`,
+                        fill: true
+                    }]
+                }
+            });
+
+            dustChart = new Chart(ctx4, {
+                ...chartConfig,
+                data: {
+                    labels: [],
+                    datasets: [{
+                        data: [],
+                        borderColor: colors.dust,
+                        backgroundColor: `${colors.dust}20`,
+                        fill: true
+                    }]
+                }
+            });
+        }
+
+        function generateRandomData() {
+            const timestamp = new Date().toLocaleTimeString();
+            
+            // Realistic Earth environmental values with natural variations
+            const baseTemp = 42.5; // Base temperature around 42.5°C (summer conditions)
+            const baseHumidity = 45; // Base humidity around 45% (comfortable indoor level)
+            const baseGas = 50; // Base gas level around 50 ppm (clean air)
+            const baseDust = 15; // Base dust density around 15 µg/m³ (good air quality)
+            
+            // Add time-based variations to simulate natural environmental changes
+            const timeVariation = Math.sin(Date.now() / 60000) * 0.5; // Slow sine wave variation
+            
+            return {
+                timestamp,
+                // Temperature: 40-45°C with gradual variations (summer conditions)
+                temperature: (baseTemp + (Math.random() - 0.5) * 5 + timeVariation).toFixed(1),
+                
+                // Humidity: 35-65% with natural fluctuations
+                humidity: (baseHumidity + (Math.random() - 0.5) * 20 + timeVariation * 2).toFixed(1),
+                
+                // Gas Level (MQ2): 30-100 ppm for clean to slightly polluted air
+                mq2: Math.max(30, Math.min(100, baseGas + (Math.random() - 0.5) * 40 + timeVariation * 5)).toFixed(0),
+                
+                // Dust Density: 5-35 µg/m³ (WHO guideline for PM2.5 is 15 µg/m³ annual mean)
+                dust: Math.max(5, Math.min(35, baseDust + (Math.random() - 0.5) * 15 + timeVariation * 3)).toFixed(1)
+            };
+        }
+
+        function updateSensorData() {
+            if (!dataStreaming) return;
+
+            const data = generateRandomData();
+            
+            // Update display values
+            document.getElementById('temperature').textContent = data.temperature;
+            document.getElementById('humidity').textContent = data.humidity;
+            document.getElementById('mq2').textContent = data.mq2;
+            document.getElementById('dust').textContent = data.dust;
+
+            // Update charts
+            updateChart(temperatureChart, dataHistory.temperature, data.temperature, data.timestamp);
+            updateChart(humidityChart, dataHistory.humidity, data.humidity, data.timestamp);
+            updateChart(mq2Chart, dataHistory.mq2, data.mq2, data.timestamp);
+            updateChart(dustChart, dataHistory.dust, data.dust, data.timestamp);
+        }
+
+        function updateChart(chart, history, value, timestamp) {
+            history.push({ value: parseFloat(value), timestamp });
+            
+            if (history.length > maxDataPoints) {
+                history.shift();
+            }
+
+            chart.data.labels = history.map(item => item.timestamp);
+            chart.data.datasets[0].data = history.map(item => item.value);
+            chart.update('none');
+        }
+
+        function toggleDataStream() {
+            dataStreaming = !dataStreaming;
+            const icon = document.getElementById('streamIcon');
+            icon.className = dataStreaming ? 'fas fa-pause' : 'fas fa-play';
+        }
+
+        function resetCharts() {
+            dataHistory = {
+                temperature: [],
+                humidity: [],
+                mq2: [],
+                dust: []
+            };
+            
+            [temperatureChart, humidityChart, mq2Chart, dustChart].forEach(chart => {
+                chart.data.labels = [];
+                chart.data.datasets[0].data = [];
+                chart.update();
+            });
+        }
+
+        function exportData() {
+            const exportData = {
+                timestamp: new Date().toISOString(),
+                data: dataHistory
+            };
+            
+            const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `rover-data-${Date.now()}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        function toggleFullscreen() {
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen();
+            } else {
+                document.exitFullscreen();
+            }
+        }
+
+        // Initialize the dashboard
+        window.addEventListener('load', () => {
+            initializeCharts();
+            setInterval(updateSensorData, 1000);
+            updateSensorData(); // Initial data load
+        });
+
+        // Add some interactive effects
+        document.querySelectorAll('.sensor-card').forEach(card => {
+            card.addEventListener('mouseenter', () => {
+                card.style.transform = 'translateY(-10px) scale(1.02)';
+            });
+            
+            card.addEventListener('mouseleave', () => {
+                card.style.transform = 'translateY(0) scale(1)';
+            });
+        });
+    </script>
+</body>
+</html>
